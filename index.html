@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Từ Điển Đơn Giản</title>
+    <title>Từ Điển Nâng Cao</title>
     <style>
         /* CSS cho giao diện */
         body {
@@ -14,12 +14,12 @@
         }
 
         .container {
-            max-width: 700px;
+            max-width: 800px;
             margin: 0 auto;
             background: #fff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
@@ -35,7 +35,7 @@
 
         #wordInput {
             flex-grow: 1;
-            padding: 10px;
+            padding: 12px;
             font-size: 16px;
             border: 1px solid #ccc;
             border-radius: 4px 0 0 4px;
@@ -43,7 +43,7 @@
         }
 
         #searchButton {
-            padding: 10px 15px;
+            padding: 12px 20px;
             background-color: #28a745;
             color: white;
             border: none;
@@ -58,27 +58,58 @@
 
         .result-container {
             border-top: 2px solid #eee;
-            padding-top: 20px;
+            padding-top: 25px;
+        }
+        
+        /* Tiêu đề từ, phiên âm và nút phát âm */
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
         }
 
         .word-title {
-            font-size: 2em;
+            font-size: 2.5em;
             color: #333;
-            margin-bottom: 5px;
+            margin: 0;
+        }
+
+        .ipa-section {
+            display: flex;
+            align-items: center;
         }
 
         .phonetic {
             color: #6c757d;
             font-style: italic;
-            margin-bottom: 15px;
+            font-size: 1.1em;
+            margin-right: 15px;
+        }
+        
+        .audio-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .audio-button:hover {
+            background-color: #0056b3;
         }
 
         .meaning-section {
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #eee;
+            margin-bottom: 25px;
+            padding: 15px;
+            border-left: 5px solid #ffc107; /* Dùng màu nổi bật hơn */
+            background-color: #fffaf0;
             border-radius: 4px;
-            background-color: #f9f9f9;
         }
 
         .part-of-speech {
@@ -86,7 +117,8 @@
             color: #dc3545;
             margin-bottom: 10px;
             display: block;
-            border-bottom: 1px dashed #dc3545;
+            font-size: 1.3em;
+            border-bottom: 2px solid #dc3545;
             padding-bottom: 5px;
         }
 
@@ -115,20 +147,39 @@
             color: #5a5a5a;
             margin-top: 5px;
             display: block;
+            border-left: 3px solid #ccc;
+            padding-left: 8px;
+        }
+
+        .synonym-antonym {
+            margin-top: 15px;
+            padding: 10px 0;
+        }
+
+        .synonym-antonym span {
+            font-weight: bold;
+            margin-right: 10px;
+            color: #28a745;
+        }
+
+        .synonym-antonym .list-words {
+            color: #333;
+            font-size: 0.9em;
         }
 
         .message {
-            padding: 10px;
+            padding: 15px;
             background-color: #ffc107;
             border-radius: 4px;
             text-align: center;
+            color: #333;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>📚 Từ Điển Anh-Việt Đơn Giản</h1>
+        <h1>📚 Từ Điển Anh-Việt Nâng Cao</h1>
 
         <div class="search-box">
             <input type="text" id="wordInput" placeholder="Nhập từ tiếng Anh..." required>
@@ -140,28 +191,43 @@
         </div>
     </div>
 
-<script>
-        // JavaScript để gọi API và hiển thị kết quả
+    <script>
+        // Hàm phát âm thanh (Audio API)
+        function playAudio(audioUrl) {
+            if (audioUrl) {
+                const audio = new Audio(audioUrl);
+                audio.play();
+            }
+        }
+        
+        // Hàm đọc văn bản (Web Speech API) - Dùng khi không có Audio
+        function speakText(word) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                // Cố gắng chọn giọng đọc tiếng Anh
+                utterance.lang = 'en-US'; 
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert("Trình duyệt không hỗ trợ tính năng đọc văn bản (Text Reader).");
+            }
+        }
+
         async function getWordData() {
             const word = document.getElementById('wordInput').value.trim().toLowerCase();
             const resultContainer = document.getElementById('resultContainer');
 
-            // 1. Kiểm tra input
             if (!word) {
                 resultContainer.innerHTML = '<p class="message">Vui lòng nhập một từ tiếng Anh hợp lệ.</p>';
                 return;
             }
 
-            // Hiển thị trạng thái đang tải
             resultContainer.innerHTML = '<p class="message">Đang tra cứu từ "' + word + '"...</p>';
 
             const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`;
 
             try {
-                // 2. Gọi API
                 const response = await fetch(apiUrl);
 
-                // 3. Kiểm tra lỗi (ví dụ: từ không tồn tại)
                 if (!response.ok) {
                     const errorData = await response.json();
                     let errorMessage = `Không tìm thấy từ: **${word}**`;
@@ -173,8 +239,6 @@
                 }
 
                 const data = await response.json();
-                
-                // 4. Xử lý và hiển thị dữ liệu
                 displayResults(data);
 
             } catch (error) {
@@ -183,59 +247,63 @@
             }
         }
 
-        // Hàm phát âm thanh
-        function playAudio(audioUrl) {
-            if (audioUrl) {
-                const audio = new Audio(audioUrl);
-                audio.play();
-            } else {
-                alert("Không có file âm thanh cho từ này.");
-            }
-        }
-
         function displayResults(data) {
             const resultContainer = document.getElementById('resultContainer');
             let html = '';
 
             const entry = data[0];
+            const word = entry.word;
 
-            // 1. Tìm file audio
-            // API thường trả về nhiều âm thanh, ta chọn cái đầu tiên có url
-            const audioObj = entry.phonetics.find(p => p.audio);
-            const audioUrl = audioObj ? audioObj.audio : null;
+            // 1. Tìm file audio và IPA
+            const phoneticObj = entry.phonetics.find(p => p.audio && p.text); // Tìm đối tượng có cả audio và text
+            const audioUrl = phoneticObj ? phoneticObj.audio : null;
+            const phoneticText = phoneticObj ? phoneticObj.text : (entry.phonetic || 'N/A');
 
-            // 2. Phần tiêu đề từ, phiên âm và nút Audio
-            html += `<div style="display: flex; align-items: center; justify-content: space-between;">`;
-            html += `<h2 class="word-title">${entry.word}</h2>`;
-            
-            if (audioUrl) {
-                 // Thêm nút phát âm. Lưu ý: Cần thêm CSS cho nút này
-                html += `<button onclick="playAudio('${audioUrl}')" style="background: none; border: none; font-size: 2em; color: #007bff; cursor: pointer;">🔊</button>`;
-            }
+            // Xác định hàm gọi khi nhấn nút
+            const buttonAction = audioUrl ? `playAudio('${audioUrl}')` : `speakText('${word}')`;
+            const buttonLabel = audioUrl ? '🔊' : '🗣️';
+            const buttonTitle = audioUrl ? 'Phát âm (Audio API)' : 'Đọc từ (Text Reader)';
+
+            // 2. Phần tiêu đề từ, IPA và nút Phát âm
+            html += `<div class="header-row">`;
+            html += `<h2 class="word-title">Vocabulary: ${word}</h2>`;
+            html += `<div class="ipa-section">`;
+            html += `<p class="phonetic">IPA: ${phoneticText}</p>`; // Hiển thị IPA
+            html += `<button class="audio-button" onclick="${buttonAction}" title="${buttonTitle}">${buttonLabel}</button>`;
             html += `</div>`;
-
-
-            // Tìm phiên âm
-            const phoneticText = entry.phonetic || entry.phonetics.find(p => p.text)?.text || 'N/A';
-            html += `<p class="phonetic">${phoneticText}</p>`;
-
-            // Phần nghĩa (meanings)
-            entry.meanings.forEach(meaning => {
+            html += `</div>`;
+            
+            // 3. Phần nghĩa (meanings)
+            entry.meanings.forEach((meaning, index) => {
                 html += `<div class="meaning-section">`;
-                html += `<span class="part-of-speech">${meaning.partOfSpeech}</span>`;
+                // Part of speech
+                html += `<span class="part-of-speech">${index + 1}. Part of speech: ${meaning.partOfSpeech}</span>`; 
+                
+                html += `<h4>Vocabulary meanings:</h4>`;
                 html += `<ul class="definition-list">`;
                 
-                meaning.definitions.slice(0, 3).forEach(def => {
+                // Hiển thị tối đa 5 định nghĩa để tránh quá dài
+                meaning.definitions.slice(0, 5).forEach(def => {
                     html += `<li>`;
-                    html += `<strong>Định nghĩa:</strong> ${def.definition}`;
+                    html += `**Định nghĩa:** ${def.definition}`;
                     
+                    // Vocabulary examples
                     if (def.example) {
-                        html += `<span class="example">**Ví dụ:** "${def.example}"</span>`;
+                        html += `<span class="example">Vocabulary examples: **"${def.example}"**</span>`;
                     }
                     html += `</li>`;
                 });
                 
                 html += `</ul>`;
+
+                // 4. Synonym và Antonym
+                if (meaning.synonyms && meaning.synonyms.length > 0) {
+                    html += `<p class="synonym-antonym"><span>Synonyms:</span><span class="list-words">${meaning.synonyms.join(', ').slice(0, 200)}...</span></p>`;
+                }
+                if (meaning.antonyms && meaning.antonyms.length > 0) {
+                    html += `<p class="synonym-antonym" style="color:#dc3545"><span>Antonyms:</span><span class="list-words">${meaning.antonyms.join(', ').slice(0, 200)}...</span></p>`;
+                }
+
                 html += `</div>`;
             });
 
