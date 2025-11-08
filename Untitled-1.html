@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Từ Điển Đơn Giản</title>
+    <style>
+        /* CSS cho giao diện */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #007bff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        #wordInput {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+        }
+
+        #searchButton {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 0 4px 4px 0;
+            font-size: 16px;
+        }
+
+        #searchButton:hover {
+            background-color: #218838;
+        }
+
+        .result-container {
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+
+        .word-title {
+            font-size: 2em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .phonetic {
+            color: #6c757d;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .meaning-section {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        .part-of-speech {
+            font-weight: bold;
+            color: #dc3545;
+            margin-bottom: 10px;
+            display: block;
+            border-bottom: 1px dashed #dc3545;
+            padding-bottom: 5px;
+        }
+
+        .definition-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .definition-list li {
+            margin-bottom: 15px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .definition-list li::before {
+            content: '•';
+            color: #007bff;
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        .example {
+            font-style: italic;
+            color: #5a5a5a;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .message {
+            padding: 10px;
+            background-color: #ffc107;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>📚 Từ Điển Anh-Việt Đơn Giản</h1>
+
+        <div class="search-box">
+            <input type="text" id="wordInput" placeholder="Nhập từ tiếng Anh..." required>
+            <button id="searchButton" onclick="getWordData()">Tra Cứu</button>
+        </div>
+
+        <div id="resultContainer" class="result-container">
+            <p class="message">Hãy nhập từ bạn muốn tra cứu và nhấn "Tra Cứu".</p>
+        </div>
+    </div>
+
+<script>
+        // JavaScript để gọi API và hiển thị kết quả
+        async function getWordData() {
+            const word = document.getElementById('wordInput').value.trim().toLowerCase();
+            const resultContainer = document.getElementById('resultContainer');
+
+            // 1. Kiểm tra input
+            if (!word) {
+                resultContainer.innerHTML = '<p class="message">Vui lòng nhập một từ tiếng Anh hợp lệ.</p>';
+                return;
+            }
+
+            // Hiển thị trạng thái đang tải
+            resultContainer.innerHTML = '<p class="message">Đang tra cứu từ "' + word + '"...</p>';
+
+            const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`;
+
+            try {
+                // 2. Gọi API
+                const response = await fetch(apiUrl);
+
+                // 3. Kiểm tra lỗi (ví dụ: từ không tồn tại)
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    let errorMessage = `Không tìm thấy từ: **${word}**`;
+                    if (errorData.title === "No Definitions Found") {
+                         errorMessage += `<br>Gợi ý: Hãy kiểm tra chính tả của từ.`
+                    }
+                    resultContainer.innerHTML = `<p class="message" style="background-color: #dc3545; color: white;">${errorMessage}</p>`;
+                    return;
+                }
+
+                const data = await response.json();
+                
+                // 4. Xử lý và hiển thị dữ liệu
+                displayResults(data);
+
+            } catch (error) {
+                console.error("Lỗi khi gọi API:", error);
+                resultContainer.innerHTML = '<p class="message" style="background-color: #ffc107;">Đã xảy ra lỗi khi kết nối hoặc xử lý dữ liệu.</p>';
+            }
+        }
+
+        // Hàm phát âm thanh
+        function playAudio(audioUrl) {
+            if (audioUrl) {
+                const audio = new Audio(audioUrl);
+                audio.play();
+            } else {
+                alert("Không có file âm thanh cho từ này.");
+            }
+        }
+
+        function displayResults(data) {
+            const resultContainer = document.getElementById('resultContainer');
+            let html = '';
+
+            const entry = data[0];
+
+            // 1. Tìm file audio
+            // API thường trả về nhiều âm thanh, ta chọn cái đầu tiên có url
+            const audioObj = entry.phonetics.find(p => p.audio);
+            const audioUrl = audioObj ? audioObj.audio : null;
+
+            // 2. Phần tiêu đề từ, phiên âm và nút Audio
+            html += `<div style="display: flex; align-items: center; justify-content: space-between;">`;
+            html += `<h2 class="word-title">${entry.word}</h2>`;
+            
+            if (audioUrl) {
+                 // Thêm nút phát âm. Lưu ý: Cần thêm CSS cho nút này
+                html += `<button onclick="playAudio('${audioUrl}')" style="background: none; border: none; font-size: 2em; color: #007bff; cursor: pointer;">🔊</button>`;
+            }
+            html += `</div>`;
+
+
+            // Tìm phiên âm
+            const phoneticText = entry.phonetic || entry.phonetics.find(p => p.text)?.text || 'N/A';
+            html += `<p class="phonetic">${phoneticText}</p>`;
+
+            // Phần nghĩa (meanings)
+            entry.meanings.forEach(meaning => {
+                html += `<div class="meaning-section">`;
+                html += `<span class="part-of-speech">${meaning.partOfSpeech}</span>`;
+                html += `<ul class="definition-list">`;
+                
+                meaning.definitions.slice(0, 3).forEach(def => {
+                    html += `<li>`;
+                    html += `<strong>Định nghĩa:</strong> ${def.definition}`;
+                    
+                    if (def.example) {
+                        html += `<span class="example">**Ví dụ:** "${def.example}"</span>`;
+                    }
+                    html += `</li>`;
+                });
+                
+                html += `</ul>`;
+                html += `</div>`;
+            });
+
+            resultContainer.innerHTML = html;
+        }
+
+        // Cho phép tra cứu khi nhấn Enter trong ô input
+        document.getElementById('wordInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                getWordData();
+            }
+        });
+    </script>
+</body>
+</html>
